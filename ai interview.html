@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态智能面试评测系统</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 Chart.js 用于图表绘制 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 引入 Lucide Icons 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 
+      CSS 样式区
+      在实际项目中，这些样式应该被移到一个独立的 style.css 文件中，
+      并通过 <link rel="stylesheet" href="style.css"> 引入。
+    -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', 'Source Han Sans', '思源黑体', sans-serif;
+            background-color: #111827; /* 深色背景 */
+            color: #d1d5db; /* 默认文字颜色 */
+        }
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        /* 页面切换动画 */
+        .page { display: none; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .active-page { display: block; }
+        
+        /* 时间提醒闪烁动画 */
+        .flashing-warning { animation: flash 1s infinite; }
+        @keyframes flash {
+            0%, 100% { color: #facc15; } /* yellow-400 */
+            50% { color: #f87171; } /* red-400 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- 主容器 -->
+    <div class="min-h-screen flex flex-col">
+        
+        <!-- 导航栏 -->
+        <nav class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-white font-bold text-xl flex items-center">
+                            <i data-lucide="brain-circuit" class="mr-2"></i>
+                            <span>AI 面试官</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#" onclick="showPage('home')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">首页</a>
+                            <a href="#" onclick="showPage('interview')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">开始面试</a>
+                            <a href="#" onclick="showPage('history')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">历史记录</a>
+                            <a href="#" onclick="showPage('profile')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">个人中心</a>
+                        </div>
+                    </div>
+                    <div class="-mr-2 flex md:hidden">
+                        <button type="button" id="mobile-menu-button" class="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
+                            <span class="sr-only">Open main menu</span>
+                            <i data-lucide="menu"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="#" onclick="showPage('home')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">首页</a>
+                    <a href="#" onclick="showPage('interview')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">开始面试</a>
+                    <a href="#" onclick="showPage('history')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">历史记录</a>
+                    <a href="#" onclick="showPage('profile')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">个人中心</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 页面内容容器 -->
+        <main class="flex-grow">
+            <!-- 首页 -->
+            <div id="home-page" class="page active-page">
+                <div class="text-center py-24 px-4 bg-gray-900">
+                    <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight">
+                        多模态智能<span class="text-indigo-400">面试评测系统</span>
+                    </h1>
+                    <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-300">
+                        结合语音、视频、文本多维度分析，提供科学、全面的能力评估与反馈。
+                    </p>
+                    <button onclick="showPage('interview')" class="mt-8 px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:bg-indigo-700 transform hover:scale-105 transition-transform duration-300">
+                        立即开始模拟面试
+                    </button>
+                </div>
+                <div class="py-16 bg-gray-800">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="text-center mb-12">
+                            <h2 class="text-3xl font-bold text-white">系统特色</h2>
+                            <p class="text-gray-400 mt-2">专为企业与求职者打造的下一代面试解决方案</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div class="bg-gray-900 p-8 rounded-xl shadow-lg text-center transform hover:-translate-y-2 transition-transform duration-300">
+                                <i data-lucide="boxes" class="mx-auto h-12 w-12 text-indigo-400"></i>
+                                <h3 class="mt-6 text-xl font-semibold text-white">多场景覆盖</h3>
+                                <p class="mt-2 text-gray-400">支持人工智能、大数据、物联网等多个技术岗位。</p>
+                            </div>
+                            <div class="bg-gray-900 p-8 rounded-xl shadow-lg text-center transform hover:-translate-y-2 transition-transform duration-300">
+                                <i data-lucide="scan-face" class="mx-auto h-12 w-12 text-indigo-400"></i>
+                                <h3 class="mt-6 text-xl font-semibold text-white">多模态分析</h3>
+                                <p class="mt-2 text-gray-400">整合语音、视频、文本数据，构建动态评测体系。</p>
+                            </div>
+                             <div class="bg-gray-900 p-8 rounded-xl shadow-lg text-center transform hover:-translate-y-2 transition-transform duration-300">
+                                <i data-lucide="file-text" class="mx-auto h-12 w-12 text-indigo-400"></i>
+                                <h3 class="mt-6 text-xl font-semibold text-white">简历解析</h3>
+                                <p class="mt-2 text-gray-400">上传简历，AI将结合简历内容进行个性化提问。</p>
+                            </div>
+                            <div class="bg-gray-900 p-8 rounded-xl shadow-lg text-center transform hover:-translate-y-2 transition-transform duration-300">
+                                <i data-lucide="shield-check" class="mx-auto h-12 w-12 text-indigo-400"></i>
+                                <h3 class="mt-6 text-xl font-semibold text-white">数据合规</h3>
+                                <p class="mt-2 text-gray-400">符合隐私保护规范，确保用户数据加密存储与合规使用。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 面试页面 -->
+            <div id="interview-page" class="page">
+                <!-- 状态1: 面试准备 -->
+                <div id="interview-setup" class="flex flex-col items-center justify-center min-h-[70vh] text-center p-4">
+                    <div class="w-full max-w-lg bg-gray-900 p-8 rounded-xl shadow-2xl">
+                        <h2 class="text-3xl font-bold text-white mb-6">面试设置</h2>
+                        <div class="space-y-6 text-left">
+                            <div>
+                                <label for="position-select" class="block text-sm font-medium text-gray-300 mb-2">1. 选择面试岗位</label>
+                                <select id="position-select" class="w-full bg-gray-800 border-gray-700 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option>算法工程师</option>
+                                    <option>后端工程师</option>
+                                    <option>前端工程师</option>
+                                    <option>测试工程师</option>
+                                    <option>大数据工程师</option>
+                                    <option>硬件工程师</option>
+                                    <option>基础架构工程师</option>
+                                    <option>安全工程师</option>
+                                    <option>机器学习工程师</option>
+                                    <option>多媒体工程师</option>
+                                    <option>计算机视觉工程师</option>
+                                    <option>运维工程师</option>
+                                    <option>数据挖掘工程师</option>
+                                    <option>自然语言处理工程师</option>
+                                    <option>公务员选拔（拓展）</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">2. 上传你的简历 (可选)</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <i data-lucide="file-up" class="mx-auto h-12 w-12 text-gray-500"></i>
+                                        <div class="flex text-sm text-gray-400">
+                                            <label for="resume-upload" class="relative cursor-pointer bg-gray-800 rounded-md font-medium text-indigo-400 hover:text-indigo-500 focus-within:outline-none">
+                                                <span>上传文件</span>
+                                                <input id="resume-upload" name="resume-upload" type="file" class="sr-only" accept=".doc,.docx,.pdf">
+                                            </label>
+                                            <p class="pl-1">或拖拽到此处</p>
+                                        </div>
+                                        <p id="resume-filename" class="text-xs text-gray-500">支持 DOC, DOCX, PDF 格式</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <input id="privacy-checkbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-600 rounded mt-1 focus:ring-indigo-500">
+                                <label for="privacy-checkbox" class="ml-3 text-sm text-gray-400">我已阅读并同意<a href="#" class="text-indigo-400 hover:underline">《隐私政策》</a>，并授权系统分析我的面试数据。</label>
+                            </div>
+                        </div>
+                        <button id="start-interview-btn" onclick="tryStartInterview()" class="mt-8 w-full py-3 bg-green-600 text-white font-semibold rounded-lg shadow-lg hover:bg-green-700">
+                            开始面试
+                        </button>
+                    </div>
+                </div>
+                <!-- 状态2: 面试中 -->
+                <div id="interview-in-progress" class="hidden flex flex-col lg:flex-row p-4 md:p-8 gap-8 min-h-[80vh]">
+                    <div class="flex-grow bg-gray-900 rounded-xl p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 id="interview-title" class="text-xl font-semibold text-white"></h3>
+                            <div class="flex items-center space-x-2 text-red-500 animate-pulse">
+                                <i data-lucide="radio" class="h-5 w-5"></i>
+                                <span>正在录制中</span>
+                            </div>
+                        </div>
+                        <div class="flex-grow bg-black rounded-lg flex items-center justify-center relative">
+                            <i data-lucide="bot" class="h-32 w-32 text-indigo-500"></i>
+                            <p id="dynamic-thinking" class="absolute bottom-4 text-sm text-gray-500 opacity-0 transition-opacity duration-500">AI 正在生成追问...</p>
+                        </div>
+                        <div class="mt-4 bg-gray-800 p-4 rounded-lg">
+                            <p id="ai-question" class="text-lg text-white">你好，请先做个自我介绍吧。</p>
+                        </div>
+                    </div>
+                    <div class="w-full lg:w-1/3 flex flex-col gap-4">
+                        <div class="bg-gray-900 rounded-xl p-4 flex-grow flex flex-col justify-between">
+                             <h3 class="text-lg font-semibold text-white mb-2 text-center">你的画面</h3>
+                            <div class="aspect-video bg-black rounded-lg flex items-center justify-center">
+                                <i data-lucide="video" class="h-16 w-16 text-gray-600"></i>
+                            </div>
+                            <div class="mt-4 flex justify-center space-x-4">
+                                <button class="p-3 bg-gray-700 rounded-full hover:bg-gray-600"><i data-lucide="mic-off" class="text-white"></i></button>
+                                <button class="p-3 bg-gray-700 rounded-full hover:bg-gray-600"><i data-lucide="video-off" class="text-white"></i></button>
+                            </div>
+                        </div>
+                        <div class="bg-gray-900 rounded-xl p-4 text-center">
+                            <h3 class="text-lg font-semibold text-white">面试计时</h3>
+                            <p id="interview-timer" class="text-3xl font-mono text-indigo-400 mt-2">10:00</p>
+                            <p id="time-reminder" class="text-sm text-yellow-400 font-bold hidden mt-1">剩余时间不足1分钟</p>
+                        </div>
+                        <button onclick="finishInterview()" class="w-full py-3 bg-red-600 text-white font-semibold rounded-lg shadow-lg hover:bg-red-700">
+                            结束面试
+                        </button>
+                    </div>
+                </div>
+                <!-- 状态3: 面试结果 -->
+                <div id="interview-results" class="hidden max-w-5xl mx-auto p-4 md:p-8">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-white">面试分析报告</h2>
+                        <p class="text-gray-400 mt-2">这是本次面试的综合评估结果。</p>
+                    </div>
+                    <div class="bg-gray-900 rounded-xl p-8 shadow-2xl">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center border-b border-gray-700 pb-8">
+                            <div class="text-center">
+                                <p class="text-gray-400 text-lg">综合评分</p>
+                                <p class="text-7xl font-bold text-indigo-400 my-2">82</p>
+                                <p class="text-xl font-semibold text-green-400">潜力优秀</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white mb-3 text-center">核心能力雷达图</h4>
+                                <canvas id="resultRadarChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-8 border-b border-gray-700 pb-8">
+                            <h4 class="font-semibold text-white mb-4 text-xl flex items-center"><i data-lucide="briefcase" class="mr-2"></i>给企业的决策参考</h4>
+                            <div class="space-y-4">
+                                <div class="bg-gray-800 p-4 rounded-lg">
+                                    <h5 class="font-semibold text-indigo-300">多模态分析亮点</h5>
+                                    <p class="text-gray-300 mt-2"><b class="text-green-400">文本分析:</b> 针对“项目挑战”问题，回答内容结构完整，符合STAR原则。</p>
+                                    <p class="text-gray-300 mt-1"><b class="text-green-400">语音分析:</b> 整体语速适中，情感积极，表现出自信。</p>
+                                    <p class="text-gray-300 mt-1"><b class="text-yellow-400">视频分析:</b> 在回答“缺点”问题时，出现约3秒的眼神躲闪，可能是不自信或紧张的表现。</p>
+                                </div>
+                                <div class="bg-gray-800 p-4 rounded-lg">
+                                    <h5 class="font-semibold text-indigo-300">待考察点</h5>
+                                    <p class="text-gray-300 mt-1">在“创新能力”方面表现平平，建议在二面中深入考察其解决开放性问题的能力。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8 border-b border-gray-700 pb-8">
+                            <h4 class="font-semibold text-white mb-4 text-xl flex items-center"><i data-lucide="user-check" class="mr-2"></i>给求职者的提升建议</h4>
+                            <div class="bg-gray-800 p-4 rounded-lg">
+                                <p class="text-gray-300 mt-1"><b>1. 眼神交流：</b> 尝试在回答时更稳定地注视摄像头，这能有效提升沟通的真诚度和专业度。</p>
+                                <p class="text-gray-300 mt-1"><b>2. 成果量化：</b> 在描述项目时，多使用数字来量化你的贡献，例如“将处理效率提升了20%”，而不是“显著提升了效率”。</p>
+                                <p class="text-gray-300 mt-1"><b>3. 创新思维展现：</b> 准备一两个能体现你创新思维或独特见解的案例，在适当时候主动分享。</p>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                             <h4 class="font-semibold text-white mb-4 text-xl flex items-center"><i data-lucide="users" class="mr-2"></i>HR 协同复核</h4>
+                             <div class="bg-gray-800 p-4 rounded-lg">
+                                 <textarea class="w-full bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="在此输入您的复核意见..."></textarea>
+                                 <div class="mt-3 flex justify-end space-x-3">
+                                     <button class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500">暂存</button>
+                                     <button class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">提交复核意见</button>
+                                 </div>
+                             </div>
+                        </div>
+                         <div class="mt-8 text-center">
+                            <button onclick="showPage('interview')" class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">再试一次</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史记录页面 -->
+            <div id="history-page" class="page">
+                <div class="max-w-7xl mx-auto p-4 md:p-8">
+                    <h2 class="text-3xl font-bold text-white mb-6">面试历史记录</h2>
+                    <div class="flex flex-col lg:flex-row gap-8">
+                        <!-- 历史列表 -->
+                        <div class="lg:w-1/3 bg-gray-900 rounded-xl p-4 h-full">
+                            <div class="mb-4">
+                                <input type="text" placeholder="搜索面试记录..." class="w-full bg-gray-800 border-gray-700 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div id="history-list" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                                <!-- 历史记录项将由JS动态生成 -->
+                            </div>
+                        </div>
+                        <!-- 详情视图 -->
+                        <div id="history-detail" class="lg:w-2/3 bg-gray-900 rounded-xl p-6 hidden">
+                            <h3 id="detail-title" class="text-2xl font-bold text-white mb-2"></h3>
+                            <p id="detail-date" class="text-gray-400 mb-6"></p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <h4 class="font-semibold text-white mb-3 text-lg">能力对比</h4>
+                                    <canvas id="historyBarChart"></canvas>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-white mb-3 text-lg">视频回放</h4>
+                                    <div class="aspect-video bg-black rounded-lg flex items-center justify-center">
+                                        <i data-lucide="play-circle" class="h-16 w-16 text-gray-500"></i>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2 text-center">时间轴标记功能开发中...</p>
+                                </div>
+                            </div>
+                             <div class="mt-8">
+                                <h4 class="font-semibold text-white mb-3 text-lg">综合能力趋势</h4>
+                                <canvas id="historyLineChart"></canvas>
+                            </div>
+                        </div>
+                         <div id="history-placeholder" class="lg:w-2/3 flex items-center justify-center bg-gray-900 rounded-xl p-6">
+                            <p class="text-gray-500">请从左侧选择一个记录查看详情</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 个人中心页面 -->
+            <div id="profile-page" class="page">
+                 <div class="max-w-3xl mx-auto p-4 md:p-8">
+                    <h2 class="text-3xl font-bold text-white mb-8">个人中心</h2>
+                    <div class="bg-gray-900 rounded-xl p-8 shadow-lg">
+                        <div class="flex items-center space-x-6 mb-8">
+                            <img class="h-24 w-24 rounded-full object-cover" src="https://placehold.co/100x100/312e81/ffffff?text=User" alt="用户头像">
+                            <div>
+                                <h3 class="text-2xl font-bold text-white">张三</h3>
+                                <p class="text-gray-400">zhangsan@example.com</p>
+                            </div>
+                        </div>
+                        <form class="space-y-6" onsubmit="event.preventDefault();">
+                            <div>
+                                <label for="username" class="block text-sm font-medium text-gray-300">用户名</label>
+                                <input type="text" id="username" value="张三" class="mt-1 block w-full bg-gray-800 border-gray-700 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-300">邮箱</label>
+                                <input type="email" id="email" value="zhangsan@example.com" class="mt-1 block w-full bg-gray-800 border-gray-700 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                             <div>
+                                <label for="password" class="block text-sm font-medium text-gray-300">修改密码</label>
+                                <input type="password" id="password" placeholder="输入新密码" class="mt-1 block w-full bg-gray-800 border-gray-700 rounded-md p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="pt-4">
+                                <button type="submit" class="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">保存更改</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="bg-gray-900 mt-auto">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 多模态智能面试评测系统. All rights reserved.</p>
+                <p class="mt-1">我们承诺保护您的隐私，所有面试数据均经过加密处理。 <a href="#" class="text-indigo-400 hover:underline">了解更多</a></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 隐私确认模态弹窗 -->
+    <div id="privacy-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-sm w-full">
+            <h3 class="text-xl font-bold text-white mb-4">隐私授权确认</h3>
+            <p class="text-gray-300 mb-6">为了对您的面试表现进行分析，我们需要您授权我们处理您的面试视频和语音数据。我们承诺将严格加密并保护您的数据安全。</p>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closePrivacyModal()" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500">取消</button>
+                <button onclick="agreeAndStart()" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700">同意并开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+      JavaScript 逻辑区
+      在实际项目中，这些脚本应该被移到一个独立的 script.js 文件中，
+      并通过 <script src="script.js" defer></script> 引入。
+    -->
+    <script>
+        // --- 全局变量和图表实例 ---
+        let resultRadarChartInstance = null;
+        let historyBarChartInstance = null;
+        let historyLineChartInstance = null;
+        let interviewTimerInterval = null;
+        let dynamicThinkingInterval = null;
+        const TOTAL_INTERVIEW_TIME = 600; // 10分钟
+
+        // --- 页面导航逻辑 ---
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.remove('active-page'));
+            const targetPage = document.getElementById(pageId + '-page');
+            if (targetPage) targetPage.classList.add('active-page');
+
+            navLinks.forEach(link => {
+                link.classList.remove('bg-gray-900', 'text-white');
+                link.classList.add('text-gray-300');
+                if (link.getAttribute('onclick').includes(pageId)) {
+                    link.classList.add('bg-gray-900', 'text-white');
+                }
+            });
+
+            if (pageId === 'interview') resetInterviewPage();
+            if(pageId === 'history') loadHistoryList();
+            
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+        
+        document.getElementById('mobile-menu-button').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // --- 面试准备页逻辑 ---
+        const privacyCheckbox = document.getElementById('privacy-checkbox');
+        const resumeUploadInput = document.getElementById('resume-upload');
+        const resumeFilenameEl = document.getElementById('resume-filename');
+        
+        resumeUploadInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                resumeFilenameEl.textContent = e.target.files[0].name;
+                resumeFilenameEl.classList.add('text-green-400');
+            }
+        });
+
+        function tryStartInterview() {
+            if (privacyCheckbox.checked) {
+                proceedToInterview();
+            } else {
+                document.getElementById('privacy-modal').classList.remove('hidden');
+            }
+        }
+
+        function closePrivacyModal() {
+            document.getElementById('privacy-modal').classList.add('hidden');
+        }
+
+        function agreeAndStart() {
+            privacyCheckbox.checked = true;
+            closePrivacyModal();
+            proceedToInterview();
+        }
+
+        // --- 面试流程逻辑 ---
+        function resetInterviewPage() {
+            document.getElementById('interview-setup').style.display = 'flex';
+            document.getElementById('interview-in-progress').style.display = 'none';
+            document.getElementById('interview-results').style.display = 'none';
+            clearInterval(interviewTimerInterval);
+            clearInterval(dynamicThinkingInterval);
+            document.getElementById('interview-timer').textContent = '10:00';
+            document.getElementById('interview-timer').classList.remove('flashing-warning');
+            document.getElementById('time-reminder').classList.add('hidden');
+            privacyCheckbox.checked = false;
+            resumeUploadInput.value = '';
+            resumeFilenameEl.textContent = '支持 DOC, DOCX, PDF 格式';
+            resumeFilenameEl.classList.remove('text-green-400');
+        }
+
+        function proceedToInterview() {
+            document.getElementById('interview-setup').style.display = 'none';
+            document.getElementById('interview-in-progress').style.display = 'flex';
+            
+            const position = document.getElementById('position-select').value;
+            document.getElementById('interview-title').textContent = position;
+            
+            let remainingSeconds = TOTAL_INTERVIEW_TIME;
+            interviewTimerInterval = setInterval(() => {
+                remainingSeconds--;
+                if (remainingSeconds < 0) {
+                    finishInterview();
+                    return;
+                }
+                
+                const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+                const secs = String(remainingSeconds % 60).padStart(2, '0');
+                document.getElementById('interview-timer').textContent = `${mins}:${secs}`;
+
+                // 时间提醒
+                if (remainingSeconds <= 60) {
+                    document.getElementById('time-reminder').classList.remove('hidden');
+                    document.getElementById('interview-timer').classList.add('flashing-warning');
+                }
+
+            }, 1000);
+
+            // 模拟AI提问和动态追问
+            const questions = ["请结合你的简历，谈谈你最重要的一个项目。", "你认为你最大的优点和缺点是什么？", "未来5年你的职业规划是什么？"];
+            let q_idx = 0;
+            dynamicThinkingInterval = setInterval(() => {
+                const thinkingEl = document.getElementById('dynamic-thinking');
+                thinkingEl.style.opacity = '1';
+                setTimeout(() => {
+                    q_idx = (q_idx + 1) % questions.length;
+                    document.getElementById('ai-question').textContent = questions[q_idx];
+                    thinkingEl.style.opacity = '0';
+                }, 2000);
+            }, 15000);
+        }
+
+        function finishInterview() {
+            clearInterval(interviewTimerInterval);
+            clearInterval(dynamicThinkingInterval);
+            document.getElementById('interview-in-progress').style.display = 'none';
+            document.getElementById('interview-results').style.display = 'block';
+            renderResultRadarChart();
+        }
+
+        const CORE_METRICS = ['专业知识', '技能匹配', '语言表达', '逻辑思维', '创新能力', '抗压能力'];
+
+        function renderResultRadarChart() {
+            const ctx = document.getElementById('resultRadarChart').getContext('2d');
+            if (resultRadarChartInstance) resultRadarChartInstance.destroy();
+            resultRadarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: CORE_METRICS,
+                    datasets: [{
+                        label: '本次面试得分',
+                        data: [85, 80, 90, 88, 70, 75],
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: { color: '#d1d5db', font: { size: 12 } },
+                            ticks: { display: false, stepSize: 20 },
+                            min: 0,
+                            max: 100,
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+        
+        // --- 历史记录与个人中心逻辑 ---
+        const mockHistoryData = [
+            { id: 1, title: '机器学习工程师', date: '2025-07-01', score: 82, data: [85, 80, 90, 88, 70, 75] },
+            { id: 2, title: '大数据工程师', date: '2025-06-15', score: 78, data: [70, 85, 80, 75, 80, 78] },
+            { id: 3, title: '公务员选拔（拓展）', date: '2025-06-02', score: 92, data: [90, 95, 85, 90, 95, 98] },
+        ];
+
+        function loadHistoryList() {
+            const listEl = document.getElementById('history-list');
+            listEl.innerHTML = '';
+            mockHistoryData.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'p-4 bg-gray-800 rounded-lg cursor-pointer hover:bg-indigo-900/50 transition-colors';
+                itemEl.onclick = () => showHistoryDetail(item.id);
+                itemEl.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-semibold text-white">${item.title}</h4>
+                        <span class="text-sm font-bold text-indigo-400">${item.score}分</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1">${item.date}</p>
+                `;
+                listEl.appendChild(itemEl);
+            });
+        }
+
+        function showHistoryDetail(id) {
+            document.getElementById('history-placeholder').style.display = 'none';
+            document.getElementById('history-detail').style.display = 'block';
+
+            const data = mockHistoryData.find(item => item.id === id);
+            if (!data) return;
+
+            document.getElementById('detail-title').textContent = data.title;
+            document.getElementById('detail-date').textContent = `面试日期: ${data.date}`;
+            renderHistoryCharts(data);
+        }
+
+        function renderHistoryCharts(detailData) {
+            const barCtx = document.getElementById('historyBarChart').getContext('2d');
+            const lineCtx = document.getElementById('historyLineChart').getContext('2d');
+            
+            if (historyBarChartInstance) historyBarChartInstance.destroy();
+            if (historyLineChartInstance) historyLineChartInstance.destroy();
+            
+            historyBarChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: CORE_METRICS,
+                    datasets: [{
+                        label: '本次得分',
+                        data: detailData.data,
+                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#d1d5db' } },
+                        y: { grid: { display: false }, ticks: { color: '#d1d5db' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            historyLineChartInstance = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: mockHistoryData.map(d => d.date.substring(5)).reverse(),
+                    datasets: [{
+                        label: '综合得分趋势',
+                        data: mockHistoryData.map(d => d.score).reverse(),
+                        fill: true,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        tension: 0.3
+                    }]
+                },
+                 options: {
+                    scales: {
+                        y: { beginAtZero: false, min: 50, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#d1d5db' } },
+                        x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#d1d5db' } }
+                    },
+                    plugins: { legend: { labels: { color: '#d1d5db' } } }
+                }
+            });
+        }
+
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage('home');
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
