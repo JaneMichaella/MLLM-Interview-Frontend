@@ -1,2 +1,97 @@
-# MLLM-Interview-Frontend
-A responsive web frontend for a multimodal AI-powered interview evaluation system. Built to interact seamlessly with backend models that analyze speech, facial expressions, and text to assess candidate performance.
+# 多模态智能面试评测系统 - 前端界面
+
+## 项目简介
+
+基于多模态大模型的智能面试评测系统前端界面，整合语音、视频、文本三维度分析，为企业和求职者提供科学的面试评估解决方案。
+
+## 核心功能
+
+### 用户注册/登录功能
+- 用户名、密码、邮箱注册
+- 使用localStorage保存登录状态
+- 未登录用户无法访问面试、历史记录、个人中心
+
+### 首页展示
+- 系统介绍与品牌展示
+- 四大特色：多场景覆盖、多模态分析、简历解析、数据合规
+
+### 智能面试
+- **面试准备**：15+技术岗位选择、简历上传（支持拖拽、格式校验）、隐私授权
+- **面试进行**：AI实时提问（可结合简历内容）、视频录制、10分钟计时、动态追问
+- **结果分析**：综合评分、六维雷达图、多模态分析报告、HR复核
+
+### 历史记录
+- 面试记录管理
+- 能力对比图表
+- 成长趋势分析
+- 视频回放（开发中）
+
+### 个人中心
+- 用户信息管理
+- 密码修改
+
+## 技术特点
+
+- **响应式设计**：Tailwind CSS + 深色主题
+- **数据可视化**：Chart.js 图表库（雷达图、柱状图、折线图）
+- **现代UI**：Lucide Icons + 流畅动画效果
+- **单页应用**：无刷新页面切换
+
+## 多模态分析维度
+
+- **文本分析**：回答结构、逻辑性、STAR原则
+- **语音分析**：语速、情感、自信度
+- **视频分析**：眼神交流、表情、行为模式
+
+## 快速部署
+
+### 环境要求
+- 现代浏览器（Chrome、Firefox、Safari、Edge）
+- 无需后端服务器
+
+### 部署步骤
+1. 下载项目文件
+2. 用浏览器直接打开 `ai interview.html`
+3. 开始使用系统
+
+```bash
+# 方式一：直接双击文件
+ai interview.html
+
+# 方式二：命令行启动
+start ai interview.html    # Windows
+open ai interview.html     # macOS
+xdg-open ai interview.html # Linux
+```
+
+## 项目结构
+
+```
+MLLM-Interview-Frontend/
+├── ai interview.html    # 主界面文件（包含CSS和JS）
+└── README.md           # 项目说明文档
+```
+
+## 浏览器兼容性
+
+- ✅ Chrome 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+
+## 开发说明
+
+当前版本为演示原型，包含：
+- 完整的UI界面和交互逻辑
+- 模拟数据展示
+- 前端状态管理
+
+生产环境需要：
+- 后端API接口
+- 视频/音频处理服务
+- 多模态AI分析引擎
+- 数据库存储
+
+## 许可证
+
+© 2025 多模态智能面试评测系统. All rights reserved.
