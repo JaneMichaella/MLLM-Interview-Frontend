@@ -51,25 +51,33 @@
 
 ### 部署步骤
 1. 下载项目文件
-2. 用浏览器直接打开 `ai interview.html`
+2. 用浏览器直接打开 `index.html`
 3. 开始使用系统
 
 ```bash
 # 方式一：直接双击文件
-ai interview.html
+index.html
 
 # 方式二：命令行启动
-start ai interview.html    # Windows
-open ai interview.html     # macOS
-xdg-open ai interview.html # Linux
+start index.html    # Windows
+open index.html     # macOS
+xdg-open index.html # Linux
 ```
 
 ## 项目结构
 
 ```
 MLLM-Interview-Frontend/
-├── ai interview.html    # 主界面文件（包含CSS和JS）
-└── README.md           # 项目说明文档
+├── index.html         # 主入口页面（骨架，动态加载内容）
+├── styles.css         # 自定义样式
+├── js/                # 前端功能模块目录
+│   ├── auth.js        # 用户认证（登录/注册/登出/资料）
+│   ├── navigation.js  # 页面导航与内容切换
+│   ├── interview.js   # 面试流程与面试页逻辑
+│   ├── history.js     # 历史记录页逻辑
+│   ├── profile.js     # 个人中心页逻辑
+│   └── main.js        # 入口初始化、全局事件
+└── README.md          # 项目说明文档
 ```
 
 ## 浏览器兼容性
