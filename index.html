@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 面试官 - 多模态智能面试评测系统</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="antialiased">
+    <!-- 主容器 -->
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-white font-bold text-xl flex items-center">
+                            <i data-lucide="brain-circuit" class="mr-2"></i>
+                            <span>AI 面试官</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#" onclick="showPage('home')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">首页</a>
+                            <a href="#" onclick="showPage('interview')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">开始面试</a>
+                            <a href="#" onclick="showPage('history')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">历史记录</a>
+                            <a href="#" onclick="showPage('profile')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">个人中心</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- 用户信息 -->
+                        <div id="user-info" class="hidden flex items-center space-x-3">
+                            <span id="user-name" class="text-gray-300 text-sm"></span>
+                            <button onclick="logout()" class="text-gray-300 hover:text-white text-sm font-medium">
+                                退出登录
+                            </button>
+                        </div>
+                        <!-- 登录按钮 -->
+                        <div id="login-button">
+                            <button onclick="showPage('login')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                登录
+                            </button>
+                        </div>
+                    </div>
+                    <div class="-mr-2 flex md:hidden">
+                        <button type="button" id="mobile-menu-button" class="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
+                            <span class="sr-only">Open main menu</span>
+                            <i data-lucide="menu"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="#" onclick="showPage('home')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">首页</a>
+                    <a href="#" onclick="showPage('interview')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">开始面试</a>
+                    <a href="#" onclick="showPage('history')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">历史记录</a>
+                    <a href="#" onclick="showPage('profile')" class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">个人中心</a>
+                    <!-- 移动端用户操作 -->
+                    <div id="mobile-user-info" class="hidden pt-4 border-t border-gray-600">
+                        <div class="px-3 py-2">
+                            <p id="mobile-user-name" class="text-gray-300 text-sm"></p>
+                            <button onclick="logout()" class="mt-2 text-gray-300 hover:text-white text-sm">
+                                退出登录
+                            </button>
+                        </div>
+                    </div>
+                    <div id="mobile-login-button" class="pt-4 border-t border-gray-600">
+                        <button onclick="showPage('login')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md text-base font-medium">
+                            登录
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 页面内容容器 -->
+        <main class="flex-grow">
+            <!-- 各个页面的内容将通过 JavaScript 动态加载 -->
+            <div id="page-content"></div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="bg-gray-900 mt-auto">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 多模态智能面试评测系统. All rights reserved.</p>
+                <p class="mt-1">我们承诺保护您的隐私，所有面试数据均经过加密处理。 <a href="#" class="text-indigo-400 hover:underline">了解更多</a></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 隐私确认模态弹窗 -->
+    <div id="privacy-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-sm w-full">
+            <h3 class="text-xl font-bold text-white mb-4">隐私授权确认</h3>
+            <p class="text-gray-300 mb-6">为了对您的面试表现进行分析，我们需要您授权我们处理您的面试视频和语音数据。我们承诺将严格加密并保护您的数据安全。</p>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closePrivacyModal()" class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500">取消</button>
+                <button onclick="agreeAndStart()" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700">同意并开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 文件引入 -->
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/interview.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

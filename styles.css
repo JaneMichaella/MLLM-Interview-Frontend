@@ -1,0 +1,112 @@
+/* 自定义CSS样式 */
+body {
+    background: linear-gradient(135deg, #1e1b4b 0%, #1f2937 100%);
+    color: #f9fafb;
+}
+
+/* 导航栏样式 */
+.nav-link {
+    transition: all 0.3s ease;
+}
+
+/* 页面容器样式 */
+.page {
+    display: none;
+}
+
+.page.active-page {
+    display: block;
+}
+
+/* 面试计时器闪烁效果 */
+.flashing-warning {
+    animation: flash 1s infinite;
+}
+
+@keyframes flash {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.5; }
+}
+
+/* 卡片悬停效果 */
+.transform:hover {
+    transform: translateY(-8px);
+}
+
+/* 上传区域样式 */
+.border-dashed {
+    transition: all 0.3s ease;
+}
+
+.border-dashed:hover {
+    border-color: #6366f1;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .grid-cols-1 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 图表容器样式 */
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+/* 按钮样式优化 */
+button {
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 表单样式 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
