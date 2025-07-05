@@ -1,0 +1,23 @@
+WebSocket接口说明文档.md
+
+# Dependencies
+# Ignore all node_modules directories
+**/node_modules
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db

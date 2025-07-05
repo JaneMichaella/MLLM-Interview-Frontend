@@ -2,6 +2,8 @@
 class InterviewManager {
     constructor() {
         this.uploadedFile = null;
+        this.parsedResumeText = null;
+        this.isParsing = false;
         this.MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
         this.ALLOWED_TYPES = [
             'application/pdf',
@@ -224,6 +226,12 @@ class InterviewManager {
     handleFileUpload(file) {
         const resumeFilenameEl = document.getElementById('resume-filename');
         if (!file) return;
+
+        if (this.isParsing) {
+            this.showUploadError('正在处理上一个文件，请稍候...');
+            return;
+        }
+
         if (!this.ALLOWED_TYPES.includes(file.type)) {
             this.showUploadError('仅支持 PDF、DOC、DOCX 格式的文件');
             return;
@@ -234,6 +242,47 @@ class InterviewManager {
         }
         this.uploadedFile = file;
         this.showUploadSuccess(file);
+        this.parseResume(file);
+    }
+
+    async parseResume(file) {
+        this.isParsing = true;
+        const resumeFilenameEl = document.getElementById('resume-filename');
+        
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'parsing-status';
+        statusDiv.className = 'text-xs text-yellow-400 mt-1';
+        statusDiv.textContent = '正在解析简历...';
+        resumeFilenameEl.appendChild(statusDiv);
+
+        const formData = new FormData();
+        formData.append('resume', file);
+
+        try {
+            const response = await fetch('http://localhost:3000/api/upload-resume', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || '未知错误');
+            }
+            
+            this.parsedResumeText = result.parsedText;
+            console.log('简历解析成功:', this.parsedResumeText);
+
+            statusDiv.textContent = '简历解析成功！';
+            statusDiv.className = 'text-xs text-green-400 mt-1 font-bold';
+
+        } catch (error) {
+            console.error('简历解析失败:', error);
+            statusDiv.textContent = `解析失败: ${error.message}`;
+            statusDiv.className = 'text-xs text-red-400 mt-1 font-bold';
+        } finally {
+            this.isParsing = false;
+        }
     }
 
     showUploadSuccess(file) {
@@ -269,6 +318,7 @@ class InterviewManager {
 
     removeUploadedFile() {
         this.uploadedFile = null;
+        this.parsedResumeText = null;
         document.getElementById('resume-upload').value = '';
         this.resetUploadArea();
     }
@@ -299,6 +349,7 @@ class InterviewManager {
         document.getElementById('time-reminder').classList.add('hidden');
         document.getElementById('privacy-checkbox').checked = false;
         this.uploadedFile = null;
+        this.parsedResumeText = null;
         document.getElementById('resume-upload').value = '';
         this.resetUploadArea();
     }
@@ -324,7 +375,7 @@ class InterviewManager {
             }
         }, 1000);
         let questions;
-        if (this.uploadedFile) {
+        if (this.parsedResumeText) {
             questions = [
                 "我看到您上传了简历，请结合简历中提到的项目，详细介绍一下您最有成就感的工作经历。",
                 "从您的简历来看，您在某个技术领域有深入研究，能谈谈您是如何持续学习和提升的吗？",
