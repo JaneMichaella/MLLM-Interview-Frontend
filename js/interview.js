@@ -15,6 +15,7 @@ class InterviewManager {
         this.dynamicThinkingInterval = null;
         this.resultRadarChartInstance = null;
         this.CORE_METRICS = ['专业知识', '技能匹配', '语言表达', '逻辑思维', '创新能力', '抗压能力'];
+        this.localStream = null; // 用于存储本地音视频流
     }
 
     renderPage() {
@@ -98,6 +99,7 @@ class InterviewManager {
                 <div class="bg-gray-900 rounded-xl p-4 flex-grow flex flex-col justify-between">
                     <h3 class="text-lg font-semibold text-white mb-2 text-center">你的画面</h3>
                     <div class="aspect-video bg-black rounded-lg flex items-center justify-center">
+                        <video id="user-video-preview" class="w-full h-full object-cover rounded-lg hidden" autoplay muted playsinline></video>
                         <i data-lucide="video" class="h-16 w-16 text-gray-600"></i>
                     </div>
                     <div class="mt-4 flex justify-center space-x-4">
@@ -354,7 +356,17 @@ class InterviewManager {
         this.resetUploadArea();
     }
 
-    proceedToInterview() {
+    async proceedToInterview() {
+        // --- 新增：启动摄像头 ---
+        try {
+            await this.startCamera();
+            console.log("摄像头和麦克风已成功启动");
+        } catch (error) {
+            console.error("无法启动媒体设备:", error);
+            alert("无法访问您的摄像头和麦克风。请检查设备权限，然后重试。");
+            return; // 如果无法启动摄像头，则中断流程
+        }
+
         document.getElementById('interview-setup').style.display = 'none';
         document.getElementById('interview-in-progress').style.display = 'flex';
         const position = document.getElementById('position-select').value;
@@ -403,12 +415,60 @@ class InterviewManager {
         }, 15000);
     }
 
+    // --- 新增：启动摄像头和麦克风的函数 ---
+    async startCamera() {
+        const videoPreview = document.getElementById('user-video-preview');
+        const videoIcon = videoPreview.nextElementSibling; // 获取图标
+
+        if (!videoPreview) {
+            console.error("未找到 video 元素");
+            return;
+        }
+
+        try {
+            // 请求访问音视频设备
+            this.localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: true 
+            });
+            
+            // 将视频流设置到 video 元素的 srcObject 属性上
+            videoPreview.srcObject = this.localStream;
+            videoPreview.classList.remove('hidden'); // 显示 video 元素
+            if(videoIcon) videoIcon.classList.add('hidden'); // 隐藏占位图标
+
+        } catch (err) {
+            console.error("getUserMedia 错误: ", err);
+            // 向用户显示错误信息，例如弹窗提示
+            alert(`无法访问摄像头和麦克风: ${err.name} - ${err.message}`);
+            throw err; // 抛出错误以便调用者处理
+        }
+    }
+
+    // --- 新增：停止媒体流的函数 ---
+    stopCamera() {
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                track.stop(); // 停止每个轨道（视频和音频）
+            });
+            this.localStream = null;
+            const videoPreview = document.getElementById('user-video-preview');
+            const videoIcon = videoPreview.nextElementSibling; // 获取图标
+            if(videoPreview) {
+                videoPreview.srcObject = null;
+                videoPreview.classList.add('hidden');
+                if(videoIcon) videoIcon.classList.remove('hidden'); // 显示占位图标
+            }
+        }
+    }
+
     finishInterview() {
         clearInterval(this.interviewTimerInterval);
         clearInterval(this.dynamicThinkingInterval);
         document.getElementById('interview-in-progress').style.display = 'none';
         document.getElementById('interview-results').style.display = 'block';
         this.renderResultRadarChart();
+        this.stopCamera(); // 停止摄像头和麦克风
     }
 
     renderResultRadarChart() {
