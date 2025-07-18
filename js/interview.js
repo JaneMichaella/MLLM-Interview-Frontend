@@ -16,6 +16,8 @@ class InterviewManager {
         this.resultRadarChartInstance = null;
         this.CORE_METRICS = ['专业知识', '技能匹配', '语言表达', '逻辑思维', '创新能力', '抗压能力'];
         this.localStream = null; // 用于存储本地音视频流
+        this.isMicEnabled = true; // 麦克风状态
+        this.isCameraEnabled = true; // 摄像头状态
     }
 
     renderPage() {
@@ -103,8 +105,12 @@ class InterviewManager {
                         <i data-lucide="video" class="h-16 w-16 text-gray-600"></i>
                     </div>
                     <div class="mt-4 flex justify-center space-x-4">
-                        <button class="p-3 bg-gray-700 rounded-full hover:bg-gray-600"><i data-lucide="mic-off" class="text-white"></i></button>
-                        <button class="p-3 bg-gray-700 rounded-full hover:bg-gray-600"><i data-lucide="video-off" class="text-white"></i></button>
+                        <button id="toggle-mic-btn" class="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors">
+                            <i data-lucide="mic" class="text-white w-5 h-5"></i>
+                        </button>
+                        <button id="toggle-camera-btn" class="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors">
+                            <i data-lucide="video" class="text-white w-5 h-5"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="bg-gray-900 rounded-xl p-4 text-center">
@@ -184,6 +190,8 @@ class InterviewManager {
         const startBtn = document.getElementById('start-interview-btn');
         const finishBtn = document.getElementById('finish-interview-btn');
         const retryBtn = document.getElementById('retry-interview-btn');
+        const toggleMicBtn = document.getElementById('toggle-mic-btn');
+        const toggleCameraBtn = document.getElementById('toggle-camera-btn');
 
         if (resumeUploadInput) {
             resumeUploadInput.addEventListener('change', (e) => {
@@ -222,6 +230,12 @@ class InterviewManager {
         }
         if (retryBtn) {
             retryBtn.addEventListener('click', () => navigationManager.showPage('interview'));
+        }
+        if (toggleMicBtn) {
+            toggleMicBtn.addEventListener('click', () => this.toggleMicrophone());
+        }
+        if (toggleCameraBtn) {
+            toggleCameraBtn.addEventListener('click', () => this.toggleCamera());
         }
     }
 
@@ -352,11 +366,19 @@ class InterviewManager {
         document.getElementById('privacy-checkbox').checked = false;
         this.uploadedFile = null;
         this.parsedResumeText = null;
+        this.isMicEnabled = true;
+        this.isCameraEnabled = true;
         document.getElementById('resume-upload').value = '';
         this.resetUploadArea();
+        // 确保完全停止摄像头
+        this.stopCamera();
     }
 
     async proceedToInterview() {
+        // 先切换到面试界面，确保按钮元素存在
+        document.getElementById('interview-setup').style.display = 'none';
+        document.getElementById('interview-in-progress').style.display = 'flex';
+        
         // --- 新增：启动摄像头 ---
         try {
             await this.startCamera();
@@ -364,11 +386,11 @@ class InterviewManager {
         } catch (error) {
             console.error("无法启动媒体设备:", error);
             alert("无法访问您的摄像头和麦克风。请检查设备权限，然后重试。");
-            return; // 如果无法启动摄像头，则中断流程
+            // 如果启动失败，返回到设置页面
+            document.getElementById('interview-setup').style.display = 'flex';
+            document.getElementById('interview-in-progress').style.display = 'none';
+            return;
         }
-
-        document.getElementById('interview-setup').style.display = 'none';
-        document.getElementById('interview-in-progress').style.display = 'flex';
         const position = document.getElementById('position-select').value;
         document.getElementById('interview-title').textContent = position;
         let remainingSeconds = this.TOTAL_INTERVIEW_TIME;
@@ -437,6 +459,9 @@ class InterviewManager {
             videoPreview.classList.remove('hidden'); // 显示 video 元素
             if(videoIcon) videoIcon.classList.add('hidden'); // 隐藏占位图标
 
+            // 更新按钮状态
+            this.updateMediaButtons();
+
         } catch (err) {
             console.error("getUserMedia 错误: ", err);
             // 向用户显示错误信息，例如弹窗提示
@@ -448,17 +473,112 @@ class InterviewManager {
     // --- 新增：停止媒体流的函数 ---
     stopCamera() {
         if (this.localStream) {
+            // 停止所有轨道
             this.localStream.getTracks().forEach(track => {
-                track.stop(); // 停止每个轨道（视频和音频）
+                track.stop();
+                console.log(`Stopped ${track.kind} track`);
             });
             this.localStream = null;
+            
             const videoPreview = document.getElementById('user-video-preview');
-            const videoIcon = videoPreview.nextElementSibling; // 获取图标
+            const videoIcon = videoPreview?.nextElementSibling;
+            
             if(videoPreview) {
                 videoPreview.srcObject = null;
                 videoPreview.classList.add('hidden');
-                if(videoIcon) videoIcon.classList.remove('hidden'); // 显示占位图标
+                if(videoIcon) videoIcon.classList.remove('hidden');
             }
+            
+            // 重置状态
+            this.isMicEnabled = true;
+            this.isCameraEnabled = true;
+            this.updateMediaButtons();
+            
+            console.log("所有媒体轨道已停止，资源已释放");
+        }
+    }
+
+    // --- 新增：切换麦克风状态 ---
+    toggleMicrophone() {
+        if (!this.localStream) return;
+        
+        const audioTrack = this.localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            this.isMicEnabled = !this.isMicEnabled;
+            audioTrack.enabled = this.isMicEnabled;
+            this.updateMediaButtons();
+            console.log(`麦克风 ${this.isMicEnabled ? '开启' : '关闭'}`);
+        }
+    }
+
+    // --- 新增：切换摄像头状态 ---
+    toggleCamera() {
+        if (!this.localStream) return;
+        
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        const videoPreview = document.getElementById('user-video-preview');
+        const videoIcon = videoPreview?.nextElementSibling;
+        
+        if (videoTrack) {
+            this.isCameraEnabled = !this.isCameraEnabled;
+            videoTrack.enabled = this.isCameraEnabled;
+            
+            // 更新视频显示
+            if (this.isCameraEnabled) {
+                videoPreview?.classList.remove('hidden');
+                videoIcon?.classList.add('hidden');
+            } else {
+                videoPreview?.classList.add('hidden');
+                videoIcon?.classList.remove('hidden');
+            }
+            
+            this.updateMediaButtons();
+            console.log(`摄像头 ${this.isCameraEnabled ? '开启' : '关闭'}`);
+        }
+    }
+
+    // --- 新增：更新媒体控制按钮状态 ---
+    updateMediaButtons() {
+        const toggleMicBtn = document.getElementById('toggle-mic-btn');
+        const toggleCameraBtn = document.getElementById('toggle-camera-btn');
+        
+        if (toggleMicBtn) {
+            const micIcon = toggleMicBtn.querySelector('i');
+            if (micIcon) {
+                if (this.isMicEnabled) {
+                    micIcon.setAttribute('data-lucide', 'mic');
+                    toggleMicBtn.classList.remove('bg-red-600');
+                    toggleMicBtn.classList.add('bg-gray-700');
+                    toggleMicBtn.title = '关闭麦克风';
+                } else {
+                    micIcon.setAttribute('data-lucide', 'mic-off');
+                    toggleMicBtn.classList.remove('bg-gray-700');
+                    toggleMicBtn.classList.add('bg-red-600');
+                    toggleMicBtn.title = '开启麦克风';
+                }
+            }
+        }
+        
+        if (toggleCameraBtn) {
+            const cameraIcon = toggleCameraBtn.querySelector('i');
+            if (cameraIcon) {
+                if (this.isCameraEnabled) {
+                    cameraIcon.setAttribute('data-lucide', 'video');
+                    toggleCameraBtn.classList.remove('bg-red-600');
+                    toggleCameraBtn.classList.add('bg-gray-700');
+                    toggleCameraBtn.title = '关闭摄像头';
+                } else {
+                    cameraIcon.setAttribute('data-lucide', 'video-off');
+                    toggleCameraBtn.classList.remove('bg-gray-700');
+                    toggleCameraBtn.classList.add('bg-red-600');
+                    toggleCameraBtn.title = '开启摄像头';
+                }
+            }
+        }
+        
+        // 重新渲染图标
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
         }
     }
 
