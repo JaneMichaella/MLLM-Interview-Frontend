@@ -537,51 +537,32 @@ class InterviewManager {
         }
     }
 
-    // --- 新增：更新媒体控制按钮状态 ---
+    // --- 修改：更新媒体控制按钮状态 新增使用/未使用摄像头和麦克风的图标状态切换---
     updateMediaButtons() {
         const toggleMicBtn = document.getElementById('toggle-mic-btn');
         const toggleCameraBtn = document.getElementById('toggle-camera-btn');
-        
+    
         if (toggleMicBtn) {
             const micIcon = toggleMicBtn.querySelector('i');
-            if (micIcon) {
-                if (this.isMicEnabled) {
-                    micIcon.setAttribute('data-lucide', 'mic');
-                    toggleMicBtn.classList.remove('bg-red-600');
-                    toggleMicBtn.classList.add('bg-gray-700');
-                    toggleMicBtn.title = '关闭麦克风';
-                } else {
-                    micIcon.setAttribute('data-lucide', 'mic-off');
-                    toggleMicBtn.classList.remove('bg-gray-700');
-                    toggleMicBtn.classList.add('bg-red-600');
-                    toggleMicBtn.title = '开启麦克风';
-                }
-            }
+            micIcon?.setAttribute('data-lucide', this.isMicEnabled ? 'mic' : 'mic-off');
+            toggleMicBtn.classList.toggle('bg-red-600', !this.isMicEnabled);
+            toggleMicBtn.classList.toggle('bg-gray-700', this.isMicEnabled);
         }
-        
+    
         if (toggleCameraBtn) {
-            const cameraIcon = toggleCameraBtn.querySelector('i');
-            if (cameraIcon) {
-                if (this.isCameraEnabled) {
-                    cameraIcon.setAttribute('data-lucide', 'video');
-                    toggleCameraBtn.classList.remove('bg-red-600');
-                    toggleCameraBtn.classList.add('bg-gray-700');
-                    toggleCameraBtn.title = '关闭摄像头';
-                } else {
-                    cameraIcon.setAttribute('data-lucide', 'video-off');
-                    toggleCameraBtn.classList.remove('bg-gray-700');
-                    toggleCameraBtn.classList.add('bg-red-600');
-                    toggleCameraBtn.title = '开启摄像头';
-                }
-            }
+            const camIcon = toggleCameraBtn.querySelector('i');
+            camIcon?.setAttribute('data-lucide', this.isCameraEnabled ? 'video' : 'video-off');
+            toggleCameraBtn.classList.toggle('bg-red-600', !this.isCameraEnabled);
+            toggleCameraBtn.classList.toggle('bg-gray-700', this.isCameraEnabled);
         }
-        
+    
         // 重新渲染图标
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        if (window.lucide && typeof lucide.createIcons === 'function') {
             lucide.createIcons();
         }
     }
-
+    
+    
     finishInterview() {
         clearInterval(this.interviewTimerInterval);
         clearInterval(this.dynamicThinkingInterval);
