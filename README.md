@@ -36,6 +36,41 @@
 - **数据可视化**：Chart.js 图表库（雷达图、柱状图、折线图）
 - **现代UI**：Lucide Icons + 流畅动画效果
 - **单页应用**：无刷新页面切换
+- **音视频传输**：实时音视频流传输接口，支持WebSocket双通道数据传输
+
+## 音视频接口实现
+
+音视频传输接口已完全集成到前端系统中，供后端对接使用：
+
+### 主要接口文件
+- **核心类**：`js/interview.js` 中的 `InterviewManager` 类
+- **音频处理器**：`static/audio-processor.js` (AudioWorklet处理器)
+
+### 具体接口方法
+1. **会话管理接口**
+   - `createInterviewSession()` - 创建面试会话（POST `/interviews/start`）
+   
+2. **WebSocket连接接口**
+   - `connectWebSockets()` - 建立双通道WebSocket连接
+   - 音频通道：`/ws/audio/{session_id}`
+   - 视频通道：`/ws/video/{session_id}`
+
+3. **音频传输接口**
+   - `startAudioStreaming()` - 启动实时音频流传输
+   - 格式：16-bit PCM，采样率16kHz
+   - 支持AudioWorklet + ScriptProcessor备用方案
+
+4. **视频传输接口**
+   - `startVideoStreaming()` - 启动视频帧传输
+   - 格式：JPEG base64编码，5FPS
+   - 包含时间戳标记
+
+5. **流控制接口**
+   - `stopStreamingToBackend()` - 停止所有音视频传输
+
+### 后端连接配置
+- **API地址**：`http://localhost:8000`
+- **WebSocket地址**：`ws://localhost:8000`
 
 ## 简历解析服务
 
@@ -97,16 +132,19 @@ MLLM-Interview-Frontend/
 │   ├── node_modules/    # (自动生成)
 │   ├── package.json     # 后端依赖与脚本
 │   └── server.js        # Express 服务器与解析逻辑
+├── js/                  # 前端功能模块目录
+│   ├── auth.js          # 用户认证（登录/注册/登出/资料）
+│   ├── navigation.js    # 页面导航与内容切换
+│   ├── interview.js     # 面试流程与音视频传输接口
+│   ├── history.js       # 历史记录页逻辑
+│   ├── profile.js       # 个人中心页逻辑
+│   └── main.js          # 入口初始化、全局事件
+├── static/              # 静态资源
+│   └── audio-processor.js # 音频处理器(AudioWorklet)
 ├── index.html           # 主入口页面（骨架，动态加载内容）
 ├── styles.css           # 自定义样式
-├── js/                  # 前端功能模块目录
-│   ├── auth.js        # 用户认证（登录/注册/登出/资料）
-│   ├── navigation.js  # 页面导航与内容切换
-│   ├── interview.js   # 面试流程与面试页逻辑
-│   ├── history.js     # 历史记录页逻辑
-│   ├── profile.js     # 个人中心页逻辑
-│   └── main.js        # 入口初始化、全局事件
-└── README.md          # 项目说明文档
+├── AUDIO_VIDEO_INTEGRATION.md # 音视频接口技术文档
+└── README.md            # 项目说明文档
 ```
 
 ## 浏览器兼容性

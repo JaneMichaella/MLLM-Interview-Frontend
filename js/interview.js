@@ -18,6 +18,20 @@ class InterviewManager {
         this.localStream = null; // 用于存储本地音视频流
         this.isMicEnabled = true; // 麦克风状态
         this.isCameraEnabled = true; // 摄像头状态
+        
+        // --- 新增：音视频传输相关属性 ---
+        this.sessionId = null; // 面试会话ID
+        this.audioSocket = null; // 音频WebSocket连接
+        this.videoSocket = null; // 视频WebSocket连接
+        this.audioContext = null; // 音频上下文
+        this.audioWorkletNode = null; // 音频处理节点
+        this.audioSource = null; // 音频源
+        this.videoFrameInterval = null; // 视频帧发送定时器
+        this.isStreamingToBackend = false; // 是否正在向后端传输数据
+        
+        // 后端配置
+        this.API_BASE_URL = "http://localhost:8000";
+        this.WS_BASE_URL = "ws://localhost:8000";
     }
 
     renderPage() {
@@ -117,6 +131,23 @@ class InterviewManager {
                     <h3 class="text-lg font-semibold text-white">面试计时</h3>
                     <p id="interview-timer" class="text-3xl font-mono text-indigo-400 mt-2">10:00</p>
                     <p id="time-reminder" class="text-sm text-yellow-400 font-bold hidden mt-1">剩余时间不足1分钟</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-4">
+                    <h3 class="text-lg font-semibold text-white mb-2 text-center">传输状态</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-300">会话ID:</span>
+                            <span id="session-id-display" class="text-gray-400 font-mono text-xs">未连接</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-300">音频传输:</span>
+                            <span id="audio-status" class="text-red-400">●</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-300">视频传输:</span>
+                            <span id="video-status" class="text-red-400">●</span>
+                        </div>
+                    </div>
                 </div>
                 <button id="finish-interview-btn" class="w-full py-3 bg-red-600 text-white font-semibold rounded-lg shadow-lg hover:bg-red-700">
                     结束面试
@@ -370,6 +401,11 @@ class InterviewManager {
         this.isCameraEnabled = true;
         document.getElementById('resume-upload').value = '';
         this.resetUploadArea();
+        
+        // --- 新增：清理音视频传输相关状态 ---
+        this.stopStreamingToBackend();
+        this.sessionId = null;
+        
         // 确保完全停止摄像头
         this.stopCamera();
     }
@@ -379,7 +415,20 @@ class InterviewManager {
         document.getElementById('interview-setup').style.display = 'none';
         document.getElementById('interview-in-progress').style.display = 'flex';
         
-        // --- 新增：启动摄像头 ---
+        // --- 新增：创建后端面试会话 ---
+        try {
+            await this.createInterviewSession();
+            console.log("后端面试会话创建成功:", this.sessionId);
+        } catch (error) {
+            console.error("创建后端面试会话失败:", error);
+            alert("无法连接到后端服务器，请检查后端服务是否启动。");
+            // 如果创建会话失败，返回到设置页面
+            document.getElementById('interview-setup').style.display = 'flex';
+            document.getElementById('interview-in-progress').style.display = 'none';
+            return;
+        }
+        
+        // --- 启动摄像头 ---
         try {
             await this.startCamera();
             console.log("摄像头和麦克风已成功启动");
@@ -390,6 +439,17 @@ class InterviewManager {
             document.getElementById('interview-setup').style.display = 'flex';
             document.getElementById('interview-in-progress').style.display = 'none';
             return;
+        }
+        
+        // --- 新增：连接音视频传输 ---
+        try {
+            this.connectWebSockets();
+            await this.startStreamingToBackend();
+            console.log("音视频传输已开始");
+        } catch (error) {
+            console.error("启动音视频传输失败:", error);
+            // 传输失败不中断面试，但记录错误
+            alert("音视频传输启动失败，面试将继续进行，但可能无法进行AI分析。");
         }
         const position = document.getElementById('position-select').value;
         document.getElementById('interview-title').textContent = position;
@@ -562,10 +622,278 @@ class InterviewManager {
         }
     }
     
+    // --- 新增：创建后端面试会话 ---
+    async createInterviewSession() {
+        const position = document.getElementById('position-select').value;
+        const requestBody = {
+            user_id: `user_${Date.now()}`, // 生成临时用户ID
+            metadata: {
+                position: position,
+                hasResume: !!this.parsedResumeText,
+                timestamp: new Date().toISOString()
+            }
+        };
+
+        try {
+            const response = await fetch(`${this.API_BASE_URL}/interviews/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`服务器错误: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.sessionId = data.session_id;
+            console.log("面试会话创建成功:", this.sessionId);
+        } catch (error) {
+            console.error("创建面试会话失败:", error);
+            throw error;
+        }
+    }
+
+    // --- 新增：连接WebSocket ---
+    connectWebSockets() {
+        if (!this.sessionId) {
+            console.error("无法连接WebSocket，缺少会话ID");
+            return;
+        }
+
+        // 更新会话ID显示
+        const sessionIdDisplay = document.getElementById('session-id-display');
+        if (sessionIdDisplay) {
+            sessionIdDisplay.textContent = this.sessionId.substring(0, 8) + '...';
+        }
+
+        // 连接音频WebSocket
+        const audioUrl = `${this.WS_BASE_URL}/ws/audio/${this.sessionId}`;
+        this.audioSocket = new WebSocket(audioUrl);
+        
+        this.audioSocket.onopen = () => {
+            console.log("音频WebSocket已连接");
+            this.updateConnectionStatus('audio', true);
+        };
+        
+        this.audioSocket.onclose = () => {
+            console.log("音频WebSocket已断开");
+            this.updateConnectionStatus('audio', false);
+        };
+        
+        this.audioSocket.onerror = (error) => {
+            console.error("音频WebSocket错误:", error);
+            this.updateConnectionStatus('audio', false);
+        };
+        
+        this.audioSocket.onmessage = (event) => {
+            console.log("收到音频服务器消息:", event.data);
+        };
+
+        // 连接视频WebSocket
+        const videoUrl = `${this.WS_BASE_URL}/ws/video/${this.sessionId}`;
+        this.videoSocket = new WebSocket(videoUrl);
+        
+        this.videoSocket.onopen = () => {
+            console.log("视频WebSocket已连接");
+            this.updateConnectionStatus('video', true);
+        };
+        
+        this.videoSocket.onclose = () => {
+            console.log("视频WebSocket已断开");
+            this.updateConnectionStatus('video', false);
+        };
+        
+        this.videoSocket.onerror = (error) => {
+            console.error("视频WebSocket错误:", error);
+            this.updateConnectionStatus('video', false);
+        };
+        
+        this.videoSocket.onmessage = (event) => {
+            console.log("收到视频服务器消息:", event.data);
+        };
+    }
+
+    // --- 新增：更新连接状态显示 ---
+    updateConnectionStatus(type, isConnected) {
+        const statusElement = document.getElementById(`${type}-status`);
+        if (statusElement) {
+            statusElement.textContent = '●';
+            statusElement.className = isConnected ? 'text-green-400' : 'text-red-400';
+        }
+    }
+
+    // --- 新增：开始音视频传输 ---
+    async startStreamingToBackend() {
+        if (!this.localStream) {
+            throw new Error("本地媒体流未初始化");
+        }
+
+        try {
+            // 启动音频传输
+            await this.startAudioStreaming();
+            
+            // 启动视频传输
+            this.startVideoStreaming();
+            
+            this.isStreamingToBackend = true;
+            console.log("音视频传输已启动");
+        } catch (error) {
+            console.error("启动音视频传输失败:", error);
+            throw error;
+        }
+    }
+
+    // --- 新增：音频传输处理 ---
+    async startAudioStreaming() {
+        if (!this.localStream || !this.audioSocket || this.audioSocket.readyState !== WebSocket.OPEN) {
+            throw new Error("无法启动音频传输：缺少媒体流或WebSocket未连接");
+        }
+
+        try {
+            // 创建音频上下文
+            this.audioContext = new AudioContext({ sampleRate: 16000 });
+
+            // 加载音频处理器
+            try {
+                await this.audioContext.audioWorklet.addModule('./static/audio-processor.js');
+                
+                // 创建音频源和工作站节点
+                this.audioSource = this.audioContext.createMediaStreamSource(this.localStream);
+                this.audioWorkletNode = new AudioWorkletNode(this.audioContext, 'audio-recorder-processor');
+
+                // 处理音频数据并发送
+                this.audioWorkletNode.port.onmessage = (event) => {
+                    if (this.audioSocket && 
+                        this.audioSocket.readyState === WebSocket.OPEN && 
+                        this.isMicEnabled) {
+                        this.audioSocket.send(event.data);
+                    }
+                };
+
+                // 连接音频处理链
+                this.audioSource.connect(this.audioWorkletNode);
+                this.audioWorkletNode.connect(this.audioContext.destination);
+                
+            } catch (workletError) {
+                console.warn("AudioWorklet加载失败，使用备用方案:", workletError);
+                
+                // 备用方案：使用ScriptProcessorNode
+                this.audioSource = this.audioContext.createMediaStreamSource(this.localStream);
+                const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+                
+                processor.onaudioprocess = (event) => {
+                    if (this.audioSocket && 
+                        this.audioSocket.readyState === WebSocket.OPEN && 
+                        this.isMicEnabled) {
+                        const inputData = event.inputBuffer.getChannelData(0);
+                        
+                        // 将Float32Array转换为Int16Array（16位PCM）
+                        const int16Data = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            int16Data[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+                        }
+                        
+                        // 发送音频数据
+                        this.audioSocket.send(int16Data.buffer);
+                    }
+                };
+
+                // 连接音频处理链
+                this.audioSource.connect(processor);
+                processor.connect(this.audioContext.destination);
+            }
+            
+            console.log("音频传输已启动");
+        } catch (error) {
+            console.error("启动音频传输失败:", error);
+            throw error;
+        }
+    }
+
+    // --- 新增：视频传输处理 ---
+    startVideoStreaming() {
+        const videoPreview = document.getElementById('user-video-preview');
+        if (!videoPreview || !this.videoSocket) {
+            throw new Error("无法启动视频传输：缺少视频元素或WebSocket未连接");
+        }
+
+        // 创建画布用于截取视频帧
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        // 定时发送视频帧
+        this.videoFrameInterval = setInterval(() => {
+            if (this.videoSocket && 
+                this.videoSocket.readyState === WebSocket.OPEN && 
+                this.isCameraEnabled &&
+                videoPreview.videoWidth > 0) {
+                
+                try {
+                    // 设置画布尺寸
+                    canvas.width = videoPreview.videoWidth;
+                    canvas.height = videoPreview.videoHeight;
+                    
+                    // 在画布上绘制当前视频帧
+                    context.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+                    
+                    // 转换为JPEG格式的base64数据
+                    const frameData = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // 添加时间戳并发送
+                    const message = `${Date.now()}:${frameData}`;
+                    this.videoSocket.send(message);
+                } catch (error) {
+                    console.error("发送视频帧失败:", error);
+                }
+            }
+        }, 200); // 每200ms发送一帧，即5FPS
+
+        console.log("视频传输已启动");
+    }
+
+    // --- 新增：停止音视频传输 ---
+    stopStreamingToBackend() {
+        // 停止视频传输
+        if (this.videoFrameInterval) {
+            clearInterval(this.videoFrameInterval);
+            this.videoFrameInterval = null;
+        }
+
+        // 停止音频传输
+        if (this.audioContext) {
+            this.audioContext.close().then(() => {
+                console.log("音频上下文已关闭");
+            }).catch(error => {
+                console.error("关闭音频上下文失败:", error);
+            });
+            this.audioContext = null;
+        }
+
+        // 关闭WebSocket连接
+        if (this.audioSocket) {
+            this.audioSocket.close();
+            this.audioSocket = null;
+        }
+
+        if (this.videoSocket) {
+            this.videoSocket.close();
+            this.videoSocket = null;
+        }
+
+        this.isStreamingToBackend = false;
+        console.log("音视频传输已停止");
+    }
     
     finishInterview() {
         clearInterval(this.interviewTimerInterval);
         clearInterval(this.dynamicThinkingInterval);
+        
+        // --- 新增：停止音视频传输 ---
+        this.stopStreamingToBackend();
+        
         document.getElementById('interview-in-progress').style.display = 'none';
         document.getElementById('interview-results').style.display = 'block';
         this.renderResultRadarChart();
