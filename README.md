@@ -76,6 +76,23 @@
 
 本项目包含一个独立的 Node.js 后端服务，专门用于处理和解析用户上传的简历文件（PDF, DOCX），提取其纯文本内容以供 AI 进行后续分析。
 
+### 服务架构
+- **Node.js服务** (端口3000)：文档解析
+- **FastAPI服务** (端口8000)：音视频AI分析
+
+### FastAPI集成示例
+FastAPI后端可通过以下方式调用简历解析服务：
+
+```python
+import requests
+
+async def parse_resume_from_nodejs(file_buffer, filename):
+    """调用Node.js服务解析简历"""
+    files = {"resume": (filename, file_buffer)}
+    response = requests.post("http://localhost:3000/api/upload-resume", files=files)
+    return response.json()["parsedText"]
+```
+
 ## 多模态分析维度
 
 - **文本分析**：回答结构、逻辑性、STAR原则
